@@ -2,6 +2,7 @@ const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const moment = require("moment");
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
@@ -55,20 +56,20 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const registerID = req.session["user_id"];
   const user = users[registerID];
-  const data = urlDatabase[req.params.shortURL]
-  if (!data){
+  const data = urlDatabase[req.params.shortURL];
+  if (!data) {
     return res.status(400).send("HTML does not exist");
   }
-  if (!registerID){
+  if (!registerID) {
     return res.status(400).send("Pleas login to see urls!");
   }
-  
+
   const templateVars = {
     user: user,
     shortURL: req.params.shortURL,
     longURL: data.longURL,
   };
-  if (user.id !== data.userID){
+  if (user.id !== data.userID) {
     return res.status(400).send("You do not own this url!");
   }
   res.render("urls_show", templateVars);
@@ -94,11 +95,13 @@ app.get("/hello", (req, res) => {
 });
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
+  const dateMade = new Date();
+    const parsedDateMade = moment(dateMade).format("MMMM Do YYYY, h:mm:ss a");
   urlDatabase[shortURL] = {
     longURL: req.body.longURL,
     userID: req.session.user_id,
+    date: parsedDateMade
   };
-  console.log("urldatabase", urlDatabase); // Log the POST request body to the console
   res.redirect(`/urls/${shortURL}`); // Respond with 'Ok' (we will replace this)
   // Makes change on index page. Generates random sting then assigns it to short url.
   // Brings you to short url change description page
@@ -132,9 +135,12 @@ app.get("/urls/:shortURL/edit", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   if (req.session.user_id) {
     const shortURL = req.params.shortURL;
+    const dateMade = new Date();
+    const parsedDateMade = moment(dateMade).format("MMMM Do YYYY, h:mm:ss a");
     const updatedURL = {
       longURL: req.body.updatedURL,
       userID: req.session.user_id,
+      date: parsedDateMade,
     };
     urlDatabase[shortURL] = updatedURL;
     res.redirect(`/urls`);
@@ -150,7 +156,6 @@ app.get("/urls", (req, res) => {
     return res.status(400).send("Please login to see your urls!");
   }
   const user = users[registerID];
-  console.log("user", user);
   const userUrls = urlsForUser(user.id, urlDatabase);
   const templateVars = {
     user: user,
@@ -173,7 +178,6 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const user = getUserByEmail(req.body.email, users);
   const registerPassword = req.body.password;
-  console.log(user);
   if (registerPassword === "") {
     res.redirect("/");
   }
