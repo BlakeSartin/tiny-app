@@ -34,16 +34,27 @@ const users = {
     password: "dishwasher-funk",
   },
 };
+const getUserByEmail = (email, data) => {
+  for (const user in data) {
+    if (data[user].email === email) {
+      return data[user];
+    }
+  }
+  return undefined;
+};
+
+
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const registerID = req.cookies["user_id"];
+  const user = users[registerID];
+  res.render("urls_new", {user: user});
   //Brings us to urls_new
 });
 
-
 app.get("/urls/:shortURL", (req, res) => {
-  const registerID = req.cookies["user_id"]
-  const user = users[registerID]
+  const registerID = req.cookies["user_id"];
+  const user = users[registerID];
   const templateVars = {
     user: user,
     shortURL: req.params.shortURL,
@@ -99,45 +110,61 @@ app.post("/urls/:shortURL", (req, res) => {
   // Page for editing short urls then submitting them. Redirects to main url page
 });
 app.get("/urls", (req, res) => {
-  const registerID = req.cookies["user_id"]
-  const user = users[registerID]
+  const registerID = req.cookies["user_id"];
+  const user = users[registerID];
   const templateVars = {
     user: user,
     urls: urlDatabase,
   };
-  console.log("registerId",templateVars)
+  console.log("registerId", templateVars);
   res.render("urls_index", templateVars);
   //Brings us to index
 });
+app.get("/login", (req, res) => {
+  const registerID = req.cookies["user_id"];
+  const user = users[registerID];
+  const templateVars = {
+    user: user,
+    urls: urlDatabase,
+  };
+  res.render('login', templateVars);
+})
+
 app.post("/login", (req, res) => {
-  
-  const username = req.body.username;
-  console.log(username);
-  res.cookie("username", username);
-  res.redirect("/urls");
+  const user = getUserByEmail(req.body.email, users)
+  console.log('user', user)
+  res.cookie("user_id", user.id)
+  res.redirect('/urls');
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+ res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 app.get("/registration", (req, res) => {
-  res.render("registration");
+  res.render("registration", {user: null});
 });
 
 app.post("/registration", (req, res) => {
-  const registerID = generateRandomString()
-  const registerEmail = req.body.email
-  const registerPassword = req.body.password
+  const registerID = generateRandomString();
+  const registerEmail = req.body.email;
+  const registerPassword = req.body.password;
+
+  if (registerEmail === "" || registerPassword === "") {
+    return res.status(400).send("email or password cannot be empty");
+  }
+  if (getUserByEmail(registerEmail, users)) {
+    return res.status(400).send("email already exists");
+  }
 
   users[registerID] = {
-    'id': registerID,
-    'email': registerEmail,
-    'password': registerPassword
-  }
-  res.cookie("user_id", registerID)
-  res.redirect('/urls')
+    id: registerID,
+    email: registerEmail,
+    password: registerPassword,
+  };
+  res.cookie("user_id", registerID);
+  res.redirect("/urls");
 });
 
 app.listen(PORT, () => {
