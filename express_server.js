@@ -17,10 +17,27 @@ function generateRandomString() {
   }
   return result;
 }
+const urlsForUser = function(id, data){
+  let userUrls = {};
+
+  for (const shortURL in data) {
+    if (data[shortURL].userID === id) {
+      userUrls[shortURL] = data[shortURL];
+    }
+  }
+
+  return userUrls;
+};
 
 const urlDatabase = {
-  b2xVn2: "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
+},
+i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
+}
 };
 const users = {
   userRandomID: {
@@ -48,8 +65,12 @@ const getUserByEmail = (email, data) => {
 app.get("/urls/new", (req, res) => {
   const registerID = req.cookies["user_id"];
   const user = users[registerID];
+  if(!user){
+    res.redirect('/login')
+  } else {
   res.render("urls_new", {user: user});
   //Brings us to urls_new
+  }
 });
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -65,8 +86,11 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
-  res.end();
+  if (req.cookies["userID"]) {
+    res.redirect('/urls');
+  } else {
+    res.redirect('/login');
+  }
   // Home Page
 });
 app.get("/urls.json", (req, res) => {
@@ -80,8 +104,8 @@ app.get("/hello", (req, res) => {
 });
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
-  console.log(req.body); // Log the POST request body to the console
+  urlDatabase[shortURL] = {longURL: req.body.longURL, userID: req.cookies["user_id"]}
+  console.log('urldatabase',urlDatabase); // Log the POST request body to the console
   res.redirect(`/urls/${shortURL}`); // Respond with 'Ok' (we will replace this)
   // Makes change on index page. Generates random sting then assigns it to short url.
   // Brings you to short url change description page
@@ -93,8 +117,14 @@ app.get("/u/:shortURL", (req, res) => {
   // Page for new short url
 });
 app.post("/urls/:shortURL/delete", (req, res) => {
+  if(req.cookies["userID"]) {
   delete urlDatabase[req.params.shortURL];
   res.redirect("/urls");
+  } else {
+    res.status(401)
+    res.send("Please login to delete!")
+  }
+  console.log("cookie", req.cookies["userID"])
   //Deletes short url and take you back to main url page
 });
 app.get("/urls/:shortURL/edit", (req, res) => {
@@ -103,20 +133,26 @@ app.get("/urls/:shortURL/edit", (req, res) => {
   // Takes you to new short url description page
 });
 app.post("/urls/:shortURL", (req, res) => {
+  if(req.cookies["userID"]) {
   const shortURL = req.params.shortURL;
-  const updatedURL = req.body.updatedURL;
+  const updatedURL = {longURL: req.body.updatedURL, userID: req.cookies["user_id"]}
   urlDatabase[shortURL] = updatedURL;
   res.redirect(`/urls`);
+  } else {
+    res.status(401)
+    res.send("Please login to edit!")
+  }
   // Page for editing short urls then submitting them. Redirects to main url page
 });
 app.get("/urls", (req, res) => {
   const registerID = req.cookies["user_id"];
-  const user = users[registerID];
+  const user = users[registerID]['id'];
+  console.log(user)
+  const userUrls = urlsForUser(user, urlDatabase);
   const templateVars = {
     user: user,
-    urls: urlDatabase,
+    urls: userUrls,
   };
-  console.log("registerId", templateVars);
   res.render("urls_index", templateVars);
   //Brings us to index
 });
@@ -139,7 +175,7 @@ app.post("/login", (req, res) => {
 
 app.post("/logout", (req, res) => {
  res.clearCookie("user_id");
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 app.get("/registration", (req, res) => {
