@@ -45,6 +45,3 @@ The path to use any short link is /u/:shortLink. This will redirect you to the l
 
 You can also reach this by clicking edit on a link, and using the link corresponding to the short URL.
 
-
-
-![This is an image](file:///home/blakesartin/Pictures/Screenshot%20from%202022-02-01%2017-19-10.png)
