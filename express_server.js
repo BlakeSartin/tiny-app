@@ -2,7 +2,7 @@ const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const moment = require("moment");
+const moment = require("moment-timezone");
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
@@ -74,13 +74,17 @@ app.get("/hello", (req, res) => {
   // Test
 });
 app.post("/urls", (req, res) => {
+  if (!req.session.user_id){
+    res.status(400).send("Please login!");
+  }
   const shortURL = generateRandomString();
   const dateMade = new Date();
-    const parsedDateMade = moment(dateMade).format("MMMM Do YYYY, h:mm:ss a");
+  var timezone = moment.tz(Intl.DateTimeFormat().resolvedOptions().timeZone).zoneAbbr();
+  const parsedDateMade = moment().tz(timezone).format("MMMM Do YYYY, h:mm:ss a");
   urlDatabase[shortURL] = {
     longURL: req.body.longURL,
     userID: req.session.user_id,
-    date: parsedDateMade
+    date: parsedDateMade,
   };
   res.redirect(`/urls/${shortURL}`); // Respond with 'Ok' (we will replace this)
   // Makes change on index page. Generates random sting then assigns it to short url.
@@ -98,7 +102,11 @@ app.get("/u/:shortURL", (req, res) => {
   // Page for new short url
 });
 app.post("/urls/:shortURL/delete", (req, res) => {
+  
   if (req.session.user_id) {
+    if(req.session.user_id !== urlDatabase[req.params.shortURL].userID) {
+      res.status(400).send("Url does not belong to you!")
+    }
     delete urlDatabase[req.params.shortURL];
     res.redirect("/urls");
   } else {
@@ -159,16 +167,16 @@ app.post("/login", (req, res) => {
   const user = getUserByEmail(req.body.email, users);
   const registerPassword = req.body.password;
   if (registerPassword === "") {
-    res.redirect("/");
+    return res.status(400).send("email or password cannot be empty!");
   }
   if (user === undefined) {
-    res.redirect("/");
+    return res.status(400).send("email or password is incorrect!");
   }
   if (bcrypt.compareSync(registerPassword, user.password)) {
     req.session.user_id = user.id;
     res.redirect("/urls");
   }
-  res.redirect("/");
+  // res.redirect("/");
 });
 
 app.post("/logout", (req, res) => {
